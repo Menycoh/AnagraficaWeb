@@ -1,162 +1,100 @@
 package it.promimpresa.anagrafica.persistence.impl;
 
+import it.promimpresa.anagrafica.model.Persona;
+import it.promimpresa.anagrafica.persistence.DAOException;
+import it.promimpresa.anagrafica.persistence.PersonaDAO; // Assicurati di avere un'interfaccia PersonaDAO
+import it.promimpresa.anagrafica.persistence.DataSource; // Importa la tua classe DataSource
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Timestamp;
-import java.util.ArrayList;
+import java.sql.Timestamp; // Per convertire LocalDateTime in Timestamp per il database
 import java.util.List;
 
-import it.promimpresa.anagrafica.persistence.impl.*;
-import it.promimpresa.anagrafica.persistence.*;
-import it.promimpresa.anagrafica.control.*;
-import it.promimpresa.anagrafica.model.Persona;
+public class PersonaDAOImpl implements PersonaDAO { // Assicurati che implementi PersonaDAO
 
-
-public class PersonaDAOImpl implements PersonaDAO {
-
-	public void save(Persona persona) throws DAOException {
-	    String SQL = "INSERT INTO persona (CF, nome, cognome, data_nascita) VALUES (?, ?, ?, ?)";
-	    
-	    Connection connection = null;
-	    PreparedStatement statement = null;
-	    ResultSet generateKeys = null;
-
-	    try {
-	        connection = DataSource.getConnection();
-	        statement = connection.prepareStatement(SQL, Statement.RETURN_GENERATED_KEYS);  // ← Migliore pratica
-	        statement.setString(1, persona.getCF());
-	        statement.setString(2, persona.getNome());
-	        statement.setString(3, persona.getCognome());
-	        statement.setTimestamp(4, Timestamp.valueOf(persona.getData_nascita()));
-	        statement.executeUpdate();
-
-	        generateKeys = statement.getGeneratedKeys();
-	        if (generateKeys.next()) {
-	            persona.setId(generateKeys.getInt(1));
-	        }
-
-	    } catch (SQLException e) {
-	        throw new DAOException("Errore durante il salvataggio della persona", e);
-	    } finally {
-	        DBUtil.close(generateKeys);  // ← AGGIUNTO
-	        DBUtil.close(statement);
-	        DBUtil.close(connection);
-	    }
+	// Costruttore vuoto, non serve più caricare il driver qui, lo fa DataSource
+	public PersonaDAOImpl() {
+		// Il driver viene caricato nel blocco statico di DataSource all'avvio.
 	}
 
-	public Persona findById(int id) throws DAOException {
-		String SQL = "SELECT * FROM persona WHERE id = ?";
-		System.out.println(SQL);
-		Persona persona = null;
+	@Override
+	public void save(Persona persona) throws DAOException {
+		// Query SQL per inserire una nuova persona.
+		// Assicurati che i nomi delle colonne corrispondano al tuo schema del database.
+		// Esempio: CF, nome, cognome, data_nascita
+		String sql = "INSERT INTO persone (CF, nome, cognome, data_nascita) VALUES (?, ?, ?, ?)";
+
 		Connection connection = null;
-		PreparedStatement statement = null;
-		ResultSet resultSet = null;
+		PreparedStatement ps = null;
+
 		try {
-			connection = DataSource.getConnection();
-			statement = connection.prepareStatement(SQL);
-			statement.setInt(1, id);
-			resultSet = statement.executeQuery();
-			if (resultSet.next()) {
-				persona = new Persona(resultSet.getInt(1), resultSet.getString(2), resultSet.getString(3),
-						resultSet.getString(4), resultSet.getTimestamp(5).toLocalDateTime());
+			connection = DataSource.getConnection(); // Ottiene una connessione dal tuo DataSource
+			ps = connection.prepareStatement(sql);
+
+			// Imposta i parametri della query
+			ps.setString(1, persona.getCF());
+			ps.setString(2, persona.getNome());
+			ps.setString(3, persona.getCognome());
+
+			// Converte LocalDateTime in Timestamp per il database
+			if (persona.getData_nascita() != null) {
+				ps.setTimestamp(4, Timestamp.valueOf(persona.getData_nascita()));
+			} else {
+				ps.setNull(4, java.sql.Types.TIMESTAMP); // Gestisce il caso di data nulla
 			}
+
+			// Esegue la query
+			int rowsAffected = ps.executeUpdate();
+			if (rowsAffected == 0) {
+				throw new DAOException("Salvataggio persona fallito, nessuna riga interessata.");
+			}
+			System.out.println("Persona salvata nel DB con CF: " + persona.getCF());
+
 		} catch (SQLException e) {
-			System.out.println(e.getMessage());
-			throw new DAOException(e.getMessage(), e);
+			// Incapsula SQLException in una DAOException personalizzata
+			throw new DAOException("Errore durante il salvataggio della persona nel database: " + e.getMessage(), e);
 		} finally {
-			DBUtil.close(resultSet);
-			DBUtil.close(statement);
-			DBUtil.close(connection);
+			// Chiude le risorse in ordine inverso rispetto a come sono state aperte
+			try {
+				if (ps != null)
+					ps.close();
+			} catch (SQLException e) {
+				System.err.println("Errore nella chiusura del PreparedStatement: " + e.getMessage());
+			}
+			DataSource.closeConnection(connection); // Chiude la connessione usando il DataSource
 		}
-		return persona;
 	}
 
 	@Override
 	public void update(Persona persona) throws DAOException {
-		String SQL = "UPDATE persona SET CF = ?,  nome = ? , cognome = ?, data_nascita = ? WHERE id = ?";
-		System.out.println(SQL);
-		Connection connection = null;
-		PreparedStatement statement = null;
-		try {
-			connection = DataSource.getConnection();
-			statement = connection.prepareStatement(SQL);
-			statement.setString(1, persona.getCF());
-			statement.setString(2, persona.getNome());
-			statement.setString(3, persona.getCognome());
-			statement.setTimestamp(4, Timestamp.valueOf(persona.getData_nascita()));
-			statement.setInt(5, persona.getId());
-			statement.executeUpdate();
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
-			throw new DAOException(e.getMessage(), e);
-		} finally {
-			DBUtil.close(statement);
-			DBUtil.close(connection);
-		}
-	}
-
-	public Persona findByCF(String CF) throws DAOException {
-		String SQL = "SELECT * FROM persona WHERE CF = ?";
-		System.out.println(SQL);
-		Connection connection = null;
-		PreparedStatement statement = null;
-		ResultSet resultSet = null;
-		Persona persona = null;
-		try {
-			connection = DataSource.getConnection();
-			statement = connection.prepareStatement(SQL);
-			statement.setString(1, CF);
-			resultSet = statement.executeQuery();
-			if (resultSet.next()) {
-				persona = new Persona(resultSet.getInt(1), resultSet.getString(2), resultSet.getString(3),
-						resultSet.getString(4), resultSet.getTimestamp(5).toLocalDateTime());
-			}
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
-			throw new DAOException(e.getMessage(), e);
-		} finally {
-			DBUtil.close(resultSet);
-			DBUtil.close(statement);
-			DBUtil.close(connection);
-		}
-		return persona;
-	}
-
-	public List<Persona> findAll() throws DAOException {
-		List<Persona> persone = new ArrayList<>();
-		String SQL = "SELECT * FROM persona";
-		System.out.println(SQL);
-		Connection connection = null;
-		PreparedStatement statement = null;
-		ResultSet resultSet = null;
-		Persona persona = null;
-		try {
-			connection = DataSource.getConnection();
-			statement = connection.prepareStatement(SQL);
-			resultSet = statement.executeQuery();
-			while (resultSet.next()) {
-				persona = new Persona(resultSet.getInt(1), resultSet.getString(2), resultSet.getString(3),
-						resultSet.getString(4), resultSet.getTimestamp(5).toLocalDateTime());
-				persone.add(persona);
-			}
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
-			throw new DAOException(e.getMessage(), e);
-		} finally {
-			DBUtil.close(resultSet);
-			DBUtil.close(statement);
-			DBUtil.close(connection);
-		}
-		return persone;
+		// TODO Auto-generated method stub
+		
 	}
 
 	@Override
 	public void delete(int id) throws DAOException {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public Persona findById(int id) throws DAOException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<Persona> findAll() throws DAOException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Persona findByCF(String CF) throws DAOException {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	@Override
@@ -183,4 +121,29 @@ public class PersonaDAOImpl implements PersonaDAO {
 		return null;
 	}
 
+	// Aggiungi qui altri metodi come findById, findAll, update, delete ecc. se
+	// necessari
+	// Esempio di un metodo findById:
+	/*
+	 * @Override public Persona findById(String cf) throws DAOException { String sql
+	 * = "SELECT CF, nome, cognome, data_nascita FROM persone WHERE CF = ?";
+	 * Connection connection = null; PreparedStatement ps = null; ResultSet rs =
+	 * null; Persona persona = null;
+	 * 
+	 * try { connection = DataSource.getConnection(); ps =
+	 * connection.prepareStatement(sql); ps.setString(1, cf); rs =
+	 * ps.executeQuery();
+	 * 
+	 * if (rs.next()) { persona = new Persona(); persona.setCF(rs.getString("CF"));
+	 * persona.setNome(rs.getString("nome"));
+	 * persona.setCognome(rs.getString("cognome")); // Converte Timestamp del
+	 * database in LocalDateTime Timestamp ts = rs.getTimestamp("data_nascita"); if
+	 * (ts != null) { persona.setData_nascita(ts.toLocalDateTime()); } } } catch
+	 * (SQLException e) { throw new
+	 * DAOException("Errore durante la ricerca della persona per CF: " +
+	 * e.getMessage(), e); } finally { try { if (rs != null) rs.close(); if (ps !=
+	 * null) ps.close(); } catch (SQLException e) {
+	 * System.err.println("Errore nella chiusura delle risorse: " + e.getMessage());
+	 * } DataSource.closeConnection(connection); } return persona; }
+	 */
 }
