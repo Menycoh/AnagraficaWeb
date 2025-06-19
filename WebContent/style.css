@@ -1,0 +1,122 @@
+@charset "ISO-8859-1";
+
+/* Reset base */
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+html, body {
+	height: 100%;
+}
+
+body {
+	display: flex;
+	flex-direction: column;
+}
+
+.wrapper {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+}
+
+/* Header */
+header {
+	background-color: #4CAF50;
+	color: white;
+	text-align: center;
+	padding: 1em 0;
+}
+
+header h1 {
+	margin: 0;
+}
+
+header p {
+	margin: 0.5em 0 0;
+}
+
+/* Main */
+main {
+	flex: 1;
+	max-width: 600px;
+	margin: 2em auto;
+	padding: 1em;
+	background-color: white;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+	color: #333;
+}
+
+/* Form */
+form {
+	margin: 1em 0;
+}
+
+.form-group {
+	margin-bottom: 1em;
+}
+
+label {
+	display: block;
+	margin-bottom: 0.5em;
+	color: #333;
+}
+
+input[type="text"], input[type="email"], textarea {
+	width: 100%;
+	padding: 0.5em;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	box-sizing: border-box;
+}
+
+/* Permetti all'utente di ridimensionare solo verticalmente */
+textarea {
+	resize: vertical;
+}
+
+input[type="checkbox"] {
+	margin-right: 0.5em;
+}
+
+/* Pulsante */
+button {
+	background-color: #4CAF50;
+	color: white;
+	border: none;
+	padding: 0.75em 1.5em;
+	text-align: center;
+	text-decoration: none;
+	display: inline-block;
+	font-size: 1em;
+	margin-top: 1em;
+	cursor: pointer;
+	border-radius: 4px;
+}
+
+button:hover {
+	background-color: #45a049;
+}
+
+/* Footer */
+footer {
+	text-align: center;
+	padding: 1em 0;
+	background-color: #333;
+	color: white;
+	margin-top: auto;
+}
+
+/* Link */
+a {
+	color: #4CAF50;
+}
+
+a:hover {
+	color: #45a049;
+}
